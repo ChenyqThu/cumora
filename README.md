@@ -14,7 +14,7 @@ Two "brain" paths:
 ## Architecture
 
 ```
- Electron / PWA / iOS / Android          ┌─────────────────┐
+ Electron / PWA / iOS / Android         ┌─────────────────┐
  ┌──────────────────┐   HTTP / WS       │   App workers   │──▶ OpenAI (Responses API)
  │    React UI      │ ◀───────────────▶ │  Express + ws   │──▶ Resend (email out)
  └──────────────────┘                   │    (any N)      │──▶ APNs / FCM (push)
