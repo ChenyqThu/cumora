@@ -183,7 +183,11 @@ jobs:
             ${{ env.AR_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/server:${{ steps.meta.outputs.tag }}
             ${{ env.AR_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/server:latest
           cache-from: type=gha,scope=server
-          cache-to: type=gha,scope=server,mode=max
+          # ignore-error: exporting the layer cache talks to GitHub's cache
+          # service AFTER the image is already pushed — a cache-side i/o
+          # timeout must not fail a build whose artifact succeeded (bit us
+          # on f8d0b97: image pushed, run red).
+          cache-to: type=gha,scope=server,mode=max,ignore-error=true
 
       - name: Summary
         run: |
@@ -246,7 +250,8 @@ jobs:
             ${{ env.AR_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/agent-computer:${{ steps.meta.outputs.tag }}
             ${{ env.AR_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/agent-computer:latest
           cache-from: type=gha,scope=agent
-          cache-to: type=gha,scope=agent,mode=max
+          # Same ignore-error rationale as the server image above.
+          cache-to: type=gha,scope=agent,mode=max,ignore-error=true
 
       - name: Summary
         run: |
