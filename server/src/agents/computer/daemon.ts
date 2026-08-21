@@ -313,6 +313,7 @@ interface RuntimeInboxResponse {
     conversation_kind?: string
     conversation_title?: string
     conversation_topic?: string | null
+    project_name?: string | null
     author_name?: string
     author_kind?: string
     body?: string
@@ -344,6 +345,31 @@ const DIGEST_MAX_MESSAGE_LINES = 40
  *  shown, exactly as before.
  *
  *  Exported for tests — pure, no server and no engine. */
+/** The per-conversation header the wake digest opens each group with: the id,
+ *  its kind/title, the project it belongs to, and the topic it exists for.
+ *
+ *  Project matters as much as topic here. An agent that sits in several project
+ *  groups otherwise cannot tell them apart from the digest alone, so everything
+ *  it has learned reads as one undifferentiated context — which is how work from
+ *  one project ends up quoted as background in another. The cloud turn has
+ *  always rendered a project line; this is the BYOA counterpart.
+ *
+ *  Exported for tests — pure, no server and no engine. */
+export function conversationHeader(row: {
+  conversation_id?: string
+  conversation_kind?: string
+  conversation_title?: string
+  project_name?: string | null
+  conversation_topic?: string | null
+}): string {
+  const kind = row.conversation_kind ? ` [${row.conversation_kind}]` : ''
+  const title = row.conversation_title ? ` "${row.conversation_title}"` : ''
+  let head = `# ${row.conversation_id}${kind}${title}`
+  if (row.project_name) head += `\n  Project: ${row.project_name}`
+  if (row.conversation_topic) head += `\n  Topic: ${row.conversation_topic}`
+  return head
+}
+
 export function renderInboxDigest(
   byConvo: Map<string, { head: string; msgs: string[] }>,
   budget = DIGEST_MAX_MESSAGE_LINES,
@@ -1487,11 +1513,7 @@ class AgentRunner {
       if (row.kind !== 'system' || (alarm && (!alarm.assigneeId || alarm.assigneeId === this.agent.id))) hasReal = true
       let convo = byConvo.get(row.conversation_id)
       if (!convo) {
-        const kind = row.conversation_kind ? ` [${row.conversation_kind}]` : ''
-        const title = row.conversation_title ? ` "${row.conversation_title}"` : ''
-        let head = `# ${row.conversation_id}${kind}${title}`
-        if (row.conversation_topic) head += `\n  Topic: ${row.conversation_topic}`
-        convo = { head, msgs: [] }
+        convo = { head: conversationHeader(row), msgs: [] }
         byConvo.set(row.conversation_id, convo)
       }
       const author = row.author_name ?? 'someone'
