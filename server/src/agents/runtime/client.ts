@@ -59,6 +59,13 @@ export interface InboxRow {
   /** The group's topic ("what this group is for"), so every agent — the cloud
    *  turn context AND the BYOA inbox digest — stays on-task. Null if unset. */
   conversation_topic: string | null
+  /** The project this group belongs to. Optional because not every row source
+   *  selects it, and null because direct chats and ungrouped conversations are
+   *  genuinely project-less. `loadInbox` populates it; the cloud turn has always
+   *  rendered a project, and carrying it here is what lets the BYOA wake digest
+   *  do the same. */
+  project_id?: string | null
+  project_name?: string | null
   author_id: string
   /** Joined from participants.kind. Lets prompt-building code (turn.ts)
    *  identify human vs agent messages without a hardcoded id allow-list. */

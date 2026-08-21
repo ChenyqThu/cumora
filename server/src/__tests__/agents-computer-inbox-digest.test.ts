@@ -13,7 +13,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { renderInboxDigest } from '../agents/computer/daemon.js'
+import { conversationHeader, renderInboxDigest } from '../agents/computer/daemon.js'
 
 type Convo = { head: string; msgs: string[] }
 
@@ -88,4 +88,49 @@ test('a conversation budgeted to zero shows none of its messages, not all of the
 
 test('an empty inbox renders as an empty digest', () => {
   assert.equal(renderInboxDigest(new Map(), 40), '')
+})
+
+// ── conversation header ──────────────────────────────────────────────────────
+// A BYOA agent that sits in several project groups has to be able to tell them
+// apart from the digest alone. The cloud turn has always rendered a project
+// line; without it here, everything the agent knows reads as one context and
+// work from one project gets quoted as background in another.
+
+test('the header names the project the group belongs to', () => {
+  const head = conversationHeader({
+    conversation_id: 'c-1',
+    conversation_kind: 'group',
+    conversation_title: 'Paper review',
+    project_name: 'Paper review',
+    conversation_topic: 'ICML submission',
+  })
+  assert.match(head, /^# c-1 \[group\] "Paper review"/)
+  assert.match(head, /\n {2}Project: Paper review/)
+  assert.match(head, /\n {2}Topic: ICML submission/)
+  // Project reads before topic: which project, then what this group is for.
+  assert.ok(head.indexOf('Project:') < head.indexOf('Topic:'))
+})
+
+test('a project-less conversation is unchanged', () => {
+  // Direct chats and ungrouped conversations are genuinely project-less; they
+  // must render exactly as they did before.
+  const head = conversationHeader({
+    conversation_id: 'c-2',
+    conversation_kind: 'dm',
+    conversation_title: 'yetone',
+    conversation_topic: null,
+  })
+  assert.equal(head, '# c-2 [dm] "yetone"')
+})
+
+test('a project with no topic still renders its project line', () => {
+  const head = conversationHeader({ conversation_id: 'c-3', project_name: 'OpenRouter plan' })
+  assert.equal(head, '# c-3\n  Project: OpenRouter plan')
+})
+
+test('an explicitly null project is treated as absent', () => {
+  // loadInbox LEFT JOINs projects, so an unassigned conversation arrives as null
+  // rather than undefined.
+  const head = conversationHeader({ conversation_id: 'c-4', project_name: null, conversation_topic: 'ship it' })
+  assert.equal(head, '# c-4\n  Topic: ship it')
 })

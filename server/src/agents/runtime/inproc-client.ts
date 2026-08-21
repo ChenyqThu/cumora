@@ -124,6 +124,12 @@ export class InProcRuntimeClient implements AgentRuntimeClient {
       `WITH convos AS (
          SELECT c.id, c.company_id,
                 c.title AS conversation_title, c.kind AS conversation_kind, c.topic AS conversation_topic,
+                -- Which project this group belongs to. The cloud turn already
+                -- shows it (turn.ts renders "Project: <name>"); BYOA agents saw
+                -- nothing, so an agent in several project groups had no way to
+                -- tell them apart. PK join on a tiny table inside the CTE that
+                -- already walks the agent's conversations.
+                c.project_id, pr.name AS project_name,
                 COALESCE(cr.last_read_at, '1970-01-01T00:00:00Z'::timestamptz) AS lr_at,
                 COALESCE(cr.last_read_message_id, '') AS lr_id,
                 EXISTS (
@@ -133,11 +139,13 @@ export class InProcRuntimeClient implements AgentRuntimeClient {
                 ) AS muted
            FROM conversations c
            LEFT JOIN conversation_reads cr ON cr.user_id = $1 AND cr.conversation_id = c.id
+           LEFT JOIN projects pr ON pr.id = c.project_id
           WHERE c.members @> to_jsonb(ARRAY[$1::text])
        )
        SELECT
           m.id, m.conversation_id, co.company_id,
           co.conversation_title, co.conversation_kind, co.conversation_topic,
+          co.project_id, co.project_name,
           m.author_id, p.kind AS author_kind, COALESCE(p.name, m.author_id) AS author_name,
           m.body, m.kind, m.sequence, m.created_at, m.attachment, m.quoted_message_id,
           (
