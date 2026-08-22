@@ -190,13 +190,25 @@ export function skypeEmojiUrl(key: string): string {
   return `/skype-emojis/anim/${key}.png`
 }
 
-/** Self-hosted sound file path. The audio archive isn't in any public
- *  repo, so we expect mp3s to land in `public/skype-sounds/{key}.mp3`
- *  out-of-band (e.g. extracted from a legacy Skype installer for
- *  internal use). Missing files cause `Audio.play()` to reject silently —
- *  the picker / message renderer never errors visibly. */
+/** Sound file URL. The audio files are deliberately NOT in this repo
+ *  (they're classic Skype event sounds — Microsoft IP we don't
+ *  redistribute in source form); they're served out-of-band from the
+ *  deployment's CDN. Self-hosters can point VITE_SKYPE_SOUNDS_BASE at
+ *  their own copies, or leave the default and get Cumora's.
+ *
+ *  Classic Skype only ever had EVENT sounds (message pop, ringtone,
+ *  login…), never per-emoticon audio — so only the emoticons with a
+ *  natural event counterpart have a file: skype→IM pop, call→ring-in,
+ *  phone→ring-out, hi→login, sleepy→logout, wait→hold,
+ *  talktothehand→busy, mail→sent, handshake→contact-added. Every other
+ *  key 404s and `Audio.play()` rejects silently by design — the picker /
+ *  message renderer never errors visibly. */
+const SKYPE_SOUNDS_BASE: string =
+  (import.meta.env?.VITE_SKYPE_SOUNDS_BASE as string | undefined)?.replace(/\/+$/, '')
+  || 'https://cdn.cumora.ai/skype-sounds'
+
 export function skypeSoundUrl(key: string): string {
-  return `/skype-sounds/${key}.mp3`
+  return `${SKYPE_SOUNDS_BASE}/${key}.mp3`
 }
 
 // Cache one Audio element per key so repeated plays don't refetch.
