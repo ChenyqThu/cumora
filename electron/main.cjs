@@ -374,6 +374,36 @@ const AUTH_DONE_HTML = `<!doctype html>
   if (nonce) frag.set('n', nonce);
   const deepLink = 'cumora://auth#' + frag.toString();
 
+  // PRIMARY handoff: POST straight back to the loopback server that served
+  // this page. Same origin, so no CORS and no preflight, and the token goes
+  // to THE process that armed the nonce — the one waiting for it.
+  //
+  // The deep link below cannot do that. The cumora:// scheme is resolved by
+  // the OS against whatever it has registered for it, which on a dev
+  // machine is regularly the WRONG binary: an unpackaged "electron ." run
+  // registers its Electron.app bundle, so a stray "npx electron" (or an old
+  // release/ build, or a mounted DMG) can win the scheme and swallow every
+  // sign-in — the token opens a stranger's window and the app you are
+  // actually running never sees it. It stays as the fallback for the case
+  // this POST can't cover: the app quit between opening the browser and
+  // finishing, so nothing is listening here anymore.
+  fetch('/auth/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token, companyId, nonce }),
+  }).then((r) => {
+    if (!r.ok) throw new Error('handoff rejected: ' + r.status);
+    h1.textContent = 'Signed in';
+    sub.textContent = 'Cumora has your session.';
+    label.innerHTML = '<span class="ok">✓</span> Signed in';
+    btn.disabled = true;
+    hint.textContent = 'You can close this tab.';
+  }).catch(() => {
+    // Loopback gone (app quit) or handoff refused — offer the OS route.
+    sub.textContent = 'Ready when you are.';
+    hint.textContent = 'You can close this tab after Cumora opens.';
+  });
+
   let opened = false;
   btn.addEventListener('click', () => {
     if (opened) return;
