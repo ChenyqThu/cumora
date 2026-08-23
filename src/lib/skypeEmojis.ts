@@ -190,19 +190,25 @@ export function skypeEmojiUrl(key: string): string {
   return `/skype-emojis/anim/${key}.png`
 }
 
-/** Sound file URL. The audio files are deliberately NOT in this repo
- *  (they're classic Skype event sounds — Microsoft IP we don't
- *  redistribute in source form); they're served out-of-band from the
- *  deployment's CDN. Self-hosters can point VITE_SKYPE_SOUNDS_BASE at
- *  their own copies, or leave the default and get Cumora's.
+/** Sound file URL. Every emoticon in the catalog has one; the files are
+ *  served from the deployment's CDN rather than committed here, and a
+ *  self-hoster can point VITE_SKYPE_SOUNDS_BASE at their own copies.
  *
- *  Classic Skype only ever had EVENT sounds (message pop, ringtone,
- *  login…), never per-emoticon audio — so only the emoticons with a
- *  natural event counterpart have a file: skype→IM pop, call→ring-in,
- *  phone→ring-out, hi→login, sleepy→logout, wait→hold,
- *  talktothehand→busy, mail→sent, handshake→contact-added. Every other
- *  key 404s and `Audio.play()` rejects silently by design — the picker /
- *  message renderer never errors visibly. */
+ *  Two provenances behind that URL:
+ *   - Nine emoticons with a real Skype event-sound counterpart use the
+ *     genuine article (skype→IM pop, call→ring-in, phone→ring-out,
+ *     hi→login, sleepy→logout, wait→hold, talktothehand→busy, mail→sent,
+ *     handshake→contact-added). Microsoft IP, which is why they stay out
+ *     of the source tree.
+ *   - The rest are synthesized — classic Skype never had per-emoticon
+ *     audio, so there was nothing to source. `scripts/gen-skype-sounds.py`
+ *     regenerates them deterministically from the catalog: a semantic
+ *     archetype per emoticon (sparkle / sad / clink / zap …) plus a
+ *     per-emoticon pitch, so a family reads as a family and no two are
+ *     alike. Original work, safe to redistribute.
+ *
+ *  A missing file still degrades quietly: `Audio.play()` rejects and the
+ *  picker / message renderer never errors visibly. */
 const SKYPE_SOUNDS_BASE: string =
   (import.meta.env?.VITE_SKYPE_SOUNDS_BASE as string | undefined)?.replace(/\/+$/, '')
   || 'https://cdn.cumora.ai/skype-sounds'
